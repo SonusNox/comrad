@@ -96,6 +96,18 @@ src/
     **Known Issues**
     - Playback controls not centered in main window
 
+- **v0.2.1:** Minor fixes
+
+    **Features**
+    - Fixed shuffle (wasn't sorting)
+    - Moved player volume setter to set volume before playback
+    - Added larger pop-out player for ease of use
+    - Rearranged pop-out player code
+    - Rearranged player controls and "now playing" song info label
+
+    **Known Issues**
+    - None so far. Tinkering ongong.
+
 ## Dependencies
 
 - **audiotags:** <https://github.com/tianyishi2001/audiotags>

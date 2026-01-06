@@ -7,27 +7,32 @@ use egui::{
 
 use crate::utils::filesys;
 
-const ADD: &str = "./assets/add.png";
-const MINI_PLAYER: &str = "./assets/mini_player.png";
-const PAUSE: &str = "./assets/pause.png";
-const PLAY: &str = "./assets/play.png";
-const PLAYLIST: &str = "./assets/playlist.png";
-const PLAYLIST_ADD: &str = "./assets/playlist_add.png";
-const REPEAT: &str = "./assets/repeat.png";
-const REPEAT_OFF: &str = "./assets/repeat_off.png";
-const REPEAT_ONE: &str = "./assets/repeat_one.png";
-const SHUFFLE: &str = "./assets/shuffle.png";
-const SHUFFLE_OFF: &str = "./assets/shuffle_off.png";
-const SKIP_BACKWARD: &str = "./assets/skip_backward.png";
-const SKIP_FORWARD: &str = "./assets/skip_forward.png";
-const STOP: &str = "./assets/stop.png";
-const VOLUME_DOWN: &str = "./assets/volume_down.png";
-const VOLUME_MUTE: &str = "./assets/volume_mute.png";
-const VOLUME_NONE: &str = "./assets/volume_none.png";
-const VOLUME_UP: &str = "./assets/volume_up.png";
+const ADD: &str = "src/assets/add.png";
+const BIG_PLAYER: &str = "src/assets/big_player.png";
+const MINI_PLAYER: &str = "src/assets/mini_player.png";
+const PAUSE: &str = "src/assets/pause.png";
+const PLAY: &str = "src/assets/play.png";
+const PLAYLIST: &str = "src/assets/playlist.png";
+const PLAYLIST_ADD: &str = "src/assets/playlist_add.png";
+const REPEAT: &str = "src/assets/repeat.png";
+const REPEAT_OFF: &str = "src/assets/repeat_off.png";
+const REPEAT_ONE: &str = "src/assets/repeat_one.png";
+const SHUFFLE: &str = "src/assets/shuffle.png";
+const SHUFFLE_OFF: &str = "src/assets/shuffle_off.png";
+const SKIP_BACKWARD: &str = "src/assets/skip_backward.png";
+const SKIP_FORWARD: &str = "src/assets/skip_forward.png";
+const STOP: &str = "src/assets/stop.png";
+const VOLUME_DOWN: &str = "src/assets/volume_down.png";
+const VOLUME_MUTE: &str = "src/assets/volume_mute.png";
+const VOLUME_NONE: &str = "src/assets/volume_none.png";
+const VOLUME_UP: &str = "src/assets/volume_up.png";
 
 pub fn get_add() -> Image<'static> {
     Image::new("bytes://".to_owned() + ADD)
+}
+
+pub fn get_big_player() -> Image<'static> {
+    Image::new("bytes://".to_owned() + BIG_PLAYER)
 }
 
 pub fn get_mini_player() -> Image<'static> {
@@ -102,6 +107,11 @@ pub fn load(cc: &CreationContext<'_>) {
     cc.egui_ctx.include_bytes(
         "bytes://".to_owned() + ADD,
         Bytes::from(filesys::get_file(ADD.to_string()).unwrap())
+    );
+
+    cc.egui_ctx.include_bytes(
+        "bytes://".to_owned() + BIG_PLAYER,
+        Bytes::from(filesys::get_file(BIG_PLAYER.to_string()).unwrap())
     );
 
     cc.egui_ctx.include_bytes(

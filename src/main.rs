@@ -63,6 +63,7 @@ impl Main {
         Self {
             // Booleans
             is_shuffled: false,
+            big_player_open: false,
             mini_player_open: false,
             playlist_add_open: false,
             playlist_edit_open: false,
@@ -119,6 +120,8 @@ impl Main {
     }
     
     fn play(&mut self) {
+        self.shuffle();
+
         if let Ok(mut player) = self.playback.try_lock() {
             match self.play_state {
                 PlayState::Paused | PlayState::Stopped => {
@@ -150,11 +153,9 @@ impl Main {
     }
     
     fn shuffle(&mut self) {
-        self.is_shuffled = !self.is_shuffled;
-
         match self.is_shuffled {
             false => {
-                if let Some(sorted) = self.now_playinglist.clone() {
+                if let Some(sorted) = self.sorted_playlist.clone() {
                     if !sorted.is_empty() { self.now_playinglist = Some(sorted); };
                 };
             },
@@ -219,6 +220,8 @@ impl Main {
                                 };
                             } else { index += 1; };
                         };
+
+                        self.play();
                     };
                 } else {
                     match self.repeat_state {
@@ -226,6 +229,8 @@ impl Main {
                             if let Some(sources) = &playlist.get_sources() {
                                 if let Some(source) = sources.get(0) {
                                     self.now_playing = source.to_string();
+
+                                    self.play();
                                 };
                             };
                         },
@@ -235,8 +240,6 @@ impl Main {
                 };
             };
         };
-
-        self.play();
     }
     
     fn stop(&mut self) {
@@ -353,6 +356,19 @@ impl Main {
     }
 
     //** UI - Buttons **//
+    fn big_player_button(&mut self, ui: &mut Ui) {
+        let icon = images::get_big_player();
+        let button = Button::new(icon);
+        let component = ui.add_sized([30.0, 30.0], button);
+
+        if component.clicked() {
+            match self.big_player_open {
+                false => self.big_player_open = true,
+                true => self.big_player_open = false
+            };
+        };
+    }
+
     fn catalog_back_button(&mut self, ui: &mut Ui) {
         let button = Button::new("Back");
         let component = ui.add_sized([ui.available_width(), 30.0], button);
@@ -411,14 +427,16 @@ impl Main {
         };
     }
 
-    fn play_button(&mut self, ui: &mut Ui) {
+    fn play_button(&mut self, ui: &mut Ui, big: bool) {
         let icon = match self.play_state {
             PlayState::Paused | PlayState::Stopped => images::get_play(),
             PlayState::Playing => images::get_pause()
         };
 
+        let size = if big { 60.0 } else { 30.0 };
+
         let button = Button::new(icon).corner_radius(90);
-        let component = ui.add_sized([30.0, 30.0], button);
+        let component = ui.add_sized([size, size], button);
 
         if component.clicked() { self.play(); };
     }
@@ -549,7 +567,7 @@ impl Main {
         };
     }
 
-    fn repeat_button(&mut self, ui: &mut Ui) {
+    fn repeat_button(&mut self, ui: &mut Ui, big: bool) {
         let color = match self.repeat_state {
             RepeatState::All | RepeatState::One => styles::get_button_fill(),
             RepeatState::None => Color32::TRANSPARENT
@@ -561,13 +579,15 @@ impl Main {
             RepeatState::One => images::get_repeat_one()
         };
 
+        let size = if big { 60.0 } else { 30.0 };
+
         let button = Button::new(icon).corner_radius(90).fill(color);
-        let component = ui.add_sized([30.0, 30.0], button);
+        let component = ui.add_sized([size, size], button);
 
         if component.clicked() { self.repeat(); };
     }
     
-    fn shuffle_button(&mut self, ui: &mut Ui) {
+    fn shuffle_button(&mut self, ui: &mut Ui, big: bool) {
         let color = match self.is_shuffled {
             false => Color32::TRANSPARENT,
             true => styles::get_button_fill()
@@ -578,24 +598,36 @@ impl Main {
             true => images::get_shuffle()
         };
 
-        let button = Button::new(icon).corner_radius(90).fill(color);
-        let component = ui.add_sized([30.0, 30.0], button);
+        let size = if big { 60.0 } else { 30.0 };
 
-        if component.clicked() { self.shuffle(); };
+        let button = Button::new(icon).corner_radius(90).fill(color);
+        let component = ui.add_sized([size, size], button);
+
+        if component.clicked() {
+            self.is_shuffled = !self.is_shuffled;
+            
+            self.shuffle();
+        };
     }
     
-    fn skip_backward_button(&mut self, ui: &mut Ui) {
+    fn skip_backward_button(&mut self, ui: &mut Ui, big: bool) {
         let icon = images::get_skip_backward();
+
+        let size = if big { 60.0 } else { 30.0 };
+
         let button = Button::new(icon).corner_radius(90);
-        let component = ui.add_sized([30.0, 30.0], button);
+        let component = ui.add_sized([size, size], button);
 
         if component.clicked() { self.skip_backward(); };
     }
     
-    fn skip_forward_button(&mut self, ui: &mut Ui) {
+    fn skip_forward_button(&mut self, ui: &mut Ui, big: bool) {
         let icon = images::get_skip_forward();
+
+        let size = if big { 60.0 } else { 30.0 };
+
         let button = Button::new(icon).corner_radius(90);
-        let component = ui.add_sized([30.0, 30.0], button);
+        let component = ui.add_sized([size, size], button);
 
         if component.clicked() { self.skip_forward(); };
     }
@@ -654,10 +686,13 @@ impl Main {
         };
     }
     
-    fn stop_button(&mut self, ui: &mut Ui) {
+    fn stop_button(&mut self, ui: &mut Ui, big: bool) {
         let icon = images::get_stop();
+
+        let size = if big { 60.0 } else { 30.0 };
+
         let button = Button::new(icon).corner_radius(90);
-        let component = ui.add_sized([30.0, 30.0], button);
+        let component = ui.add_sized([size, size], button);
 
         if component.clicked() {
             self.now_playing = String::new();
@@ -688,21 +723,74 @@ impl Main {
         });
     }
 
-    fn controls(&mut self, ui: &mut Ui) {
+    fn big_player(&mut self, ctx: &Context) {
+        let id = ViewportId::from_hash_of("big_player");
+
+        let viewport = ViewportBuilder::default().with_decorations(false)
+            .with_inner_size(Vec2::new(700.0, 241.0));
+
+        if self.big_player_open {
+            ctx.show_viewport_immediate(id, viewport, |ctx, class| {
+                assert!(class == ViewportClass::Immediate, "Fatal error.");
+
+                CentralPanel::default().frame(Frame::NONE).show(ctx, |ui| {
+                    let rect = {
+                        let mut rect = ui.max_rect();
+
+                        rect.max.y = rect.min.y + ui.available_height();
+
+                        rect
+                    };
+
+                    let panel = ui.interact(rect, Id::new("big_player"), Sense::click_and_drag());
+
+                    if panel.drag_started_by(PointerButton::Primary) {
+                        ctx.send_viewport_cmd(ViewportCommand::StartDrag);
+                    };
+
+                    ui.add_space(10.0);
+
+                    ui.horizontal(|ui| {
+                        ui.add_space(12.0);
+
+                        let album = data::get_album(Some(self.now_playing.clone()));
+                        let artist = data::get_artist(Some(self.now_playing.clone()));
+                        let mut title = data::get_title(Some(self.now_playing.clone()));
+
+                        if title == "" {
+                            title = filesys::create_from_path(self.now_playing.clone());
+                        };
+
+                        self.playing_view(ui, album, artist, title, false);
+                    });
+
+                    ui.add_space(10.0);
+
+                    ui.horizontal(|ui| {
+                        ui.add_space(155.0);
+
+                        self.controls(ui, true);
+                    });
+                });
+            });
+        };
+    }
+
+    fn controls(&mut self, ui: &mut Ui, big: bool) {
         ui.horizontal(|ui| {
-            self.repeat_button(ui);
+            self.repeat_button(ui, big);
 
             let enabled = if self.now_playing != String::new() { true }
             else { false };
 
             ui.add_enabled_ui(enabled, |ui| {
-                self.skip_backward_button(ui);
-                self.stop_button(ui);
-                self.play_button(ui);
-                self.skip_forward_button(ui);
+                self.skip_backward_button(ui, big);
+                self.stop_button(ui, big);
+                self.play_button(ui, big);
+                self.skip_forward_button(ui, big);
             });
 
-            self.shuffle_button(ui);
+            self.shuffle_button(ui, big);
         });
     }
 
@@ -710,7 +798,7 @@ impl Main {
         let id = ViewportId::from_hash_of("mini_player");
 
         let viewport = ViewportBuilder::default().with_always_on_top().with_decorations(false)
-            .with_inner_size(Vec2::new(223.0, 115.0)).with_transparent(true);
+            .with_inner_size(Vec2::new(223.0, 115.0));
 
         if self.mini_player_open {
             ctx.show_viewport_immediate(id, viewport, |ctx, class| {
@@ -752,7 +840,7 @@ impl Main {
                     ui.horizontal(|ui| {
                         ui.add_space(12.0);
 
-                        self.controls(ui);
+                        self.controls(ui, false);
                     });
                 });
             });
@@ -848,21 +936,20 @@ impl Main {
         });
     }
 
-    fn playing_view(&mut self, ui: &mut Ui, album: String, artist: String, title: String,
-        mini: bool) {
-        if mini {
-            ui.vertical(|ui| {
-                ui.label(RichText::new(title.clone()).size(12.0));
-                ui.label(RichText::new(artist.clone()).size(12.0));
-                ui.label(RichText::new(album.clone()).size(12.0));
-            });
-        } else {
-            ui.vertical(|ui| {
-                ui.label(title.clone());
-                ui.label(artist.clone());
-                ui.label(album.clone());
-            });
-        };
+    fn playing_view(&mut self, ui: &mut Ui, album: String, artist: String, title: String, mini: bool) {
+        let size = if mini { 12.0 } else { 40.0 };
+        let width = if mini { 193.0 } else { 680.0 };
+
+        ui.vertical(|ui| {
+            ui.add_sized([width, size], Label::new(
+                RichText::new(title.clone()).size(size)).truncate());
+
+            ui.add_sized([width, size], Label::new(
+                RichText::new(artist.clone()).size(size)).truncate());
+
+            ui.add_sized([width, size], Label::new(
+                RichText::new(album.clone()).size(size)).truncate());
+        });
     }
     
     fn player(&mut self, ctx: &Context, ui: &mut Ui) -> Response {
@@ -871,74 +958,87 @@ impl Main {
         if ui.is_rect_visible(rect) {
             ui.add_space(8.5);
 
-            ui.horizontal(|ui| {
-                self.change_dir_button(ui);
-                self.dir_dialog.update(ctx);
+            if let Ok(mut player) = self.playback.try_lock() {
+                player.set_volume(self.volume as f32 / 100.0);
+            };
 
-                if let Some(path) = self.dir_dialog.take_picked() {
-                    let path = path.to_path_buf().to_string_lossy().to_string();
+            ui.columns(2, |columns| {
+                columns[0].horizontal(|ui| {
+                    self.change_dir_button(ui);
+                    self.dir_dialog.update(ctx);
 
-                    self.dir = path.clone();
-                    self.path = path.clone();
+                    if let Some(path) = self.dir_dialog.take_picked() {
+                        let path = path.to_path_buf().to_string_lossy().to_string();
 
-                    let _ = filesys::edit_config(path, self.volume);
-                };
+                        self.dir = path.clone();
+                        self.path = path.clone();
 
-                ui.add_space(5.5);
+                        let _ = filesys::edit_config(path, self.volume);
+                    };
 
-                ui.add_sized([ui.available_width(), 30.0],
-                    TextEdit::singleline(&mut self.dir.clone()).interactive(false));
+                    ui.add_space(5.5);
+
+                    ui.add_sized([ui.available_width(), 30.0],
+                        TextEdit::singleline(&mut self.dir.clone()).interactive(false));
+                });
+
+                columns[1].horizontal(|ui| {
+                    ui.columns(3, |columns| {
+                        columns[0].horizontal(|ui| {
+                            ui.add_space(10.0);
+
+                            self.controls(ui, false);
+                        });
+
+                        columns[1].add_space(5.0);
+
+                        columns[1].horizontal(|ui| {
+                            self.tracking(ui);
+                                    
+                            ui.add_space(10.0);
+                            
+                            self.volume(ui);
+                        });
+
+                        columns[2].allocate_ui_with_layout(Vec2::ZERO,
+                            Layout::right_to_left(Align::RIGHT),
+                            |ui| {
+                            self.mini_player_button(ui);
+                            self.big_player_button(ui);
+                        });
+                    });
+                });
             });
 
             ui.add_space(6.0);
 
             ui.horizontal(|ui| {
-                ui.columns(3, |columns| {
-                    columns[0].allocate_ui_with_layout(Vec2::ZERO,
-                        Layout::left_to_right(Align::LEFT), |ui| {
-                            let album = data::get_album(Some(self.now_playing.clone()));
-                            let artist = data::get_artist(Some(self.now_playing.clone()));
-                            let mut title = data::get_title(Some(self.now_playing.clone()));
+                let album = data::get_album(Some(self.now_playing.clone()));
+                let artist = data::get_artist(Some(self.now_playing.clone()));
+                let mut title = data::get_title(Some(self.now_playing.clone()));
 
-                            if title == "" {
-                                title = filesys::create_from_path(self.now_playing.clone());
-                            };
+                if title == "" {
+                    title = filesys::create_from_path(self.now_playing.clone());
+                };
 
-                            self.playing_view(ui,
-                                "                ".to_owned() + &album,
-                                "                ".to_owned() + &artist,
-                                "Playing: ".to_owned() + &title, false);
-                        });
+                ui.vertical(|ui| {
+                    let playing = "Playing:  ".to_owned();
+                    let mut alb = "  —  ".to_owned() + &album.clone();
+                    let mut art = "  —  ".to_owned() + &artist.clone();
 
-                    columns[1].vertical(|ui| {
-                        self.controls(ui);
-                        
-                        ui.add_space(10.0);
+                    if album == String::new() { alb = "".to_string(); };
+                    if artist == String::new() { art = "".to_string(); };
 
-                        ui.horizontal(|ui| {
-                            ui.add_space(10.0);
+                    let line = playing.clone() + &title.clone() + &art.clone() + &alb.clone();
 
-                            self.tracking(ui);
-                            
-                            ui.add_space(10.0);
-                            
-                            self.volume(ui);
-                        });
-                    });
-
-                    columns[2].allocate_ui_with_layout(Vec2::ZERO,
-                        Layout::right_to_left(Align::RIGHT),
-                        |ui| { self.mini_player_button(ui); });
+                    if self.now_playing != String::new() { ui.label(line); }
+                    else { ui.label(playing); };
                 });
-
+                
                 self.update_playback();
             });
 
             self.setup_stopwatch();
-
-            if let Ok(mut player) = self.playback.try_lock() {
-                player.set_volume(self.volume as f32 / 100.0);
-            };
 
             ui.add_space(1.5);
 
@@ -1153,6 +1253,7 @@ impl App for Main {
 
         styles::set_styles(ctx);
 
+        self.big_player(ctx);
         self.mini_player(ctx);
 
         TopBottomPanel::top("player").frame(frame).resizable(false).show(ctx, |ui| {
@@ -1182,6 +1283,7 @@ impl App for Main {
 struct Main {
     // Booleans
     is_shuffled: bool,
+    big_player_open: bool,
     mini_player_open: bool,
     playlist_add_open: bool,
     playlist_edit_open: bool,
@@ -1228,7 +1330,7 @@ struct Main {
 }
 
 pub fn main() {
-    let icon = "./assets/icon.ico";
+    let icon = "src/assets/icon.ico";
     let name = "ComRad: Compact Radio";
     let mut viewport = ViewportBuilder::default().with_maximized(true);
 
