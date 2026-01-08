@@ -27,6 +27,10 @@ A cross-platform, light-weight media player.
 
 - [ ] **Video Playback:** Displays video in the central area of the application
 
+#### Playback
+
+- [ ] **URL Playback:** Play audio and/or video from a url source
+
 #### Streaming
 
 - [ ] **Stream Input:** Connect to and play streams from other sources
@@ -43,6 +47,8 @@ A cross-platform, light-weight media player.
 
 ```
 src/
+├── assets/             # Contains all images used in this project
+│                         (not meant to be uploaded to repo)
 ├── media/
 │   ├── mod.rs
 │   ├── playback.rs     # Manages playback for various media
@@ -56,57 +62,6 @@ src/
 ├── lib.rs
 └── main.rs             # Application entry, logic, and GUI management and controls
 ```
-
-## Version History
-
-- **v0.1.0:** Initial "functional" release - this is the barebones working version
-
-    **Features**
-    - Basic audio playback (including from video sources)
-    - Playback within a playlist
-    - Custom playlist management
-    - Seamless switching between playlists and catalog
-    - Directory navigation with auto-populating pseudo-playlist
-    - Playback & volume controls
-    - Display song title in "Now Playing" area
-    - Display song title, artist, and album in "Song Info" area
-    - Auto-generates config.ini file
-    - Main directory and volume saved to config.ini
-
-    **Known Issues**
-    - Cannot play from all songs: A pseudo-playlist is made only when accessing a folder in the main directory
-    - Pseudo-playlist changes when navigating: Changing the playlist confuses the playback code and doesn't allow the song to change until one is selected, moving playback to the new playlist
-
-- **v0.1.1:** Shuffle feature added and playlist management updated
-
-    **Features**
-    - Shuffle button functionality added
-
-    **Known Issues**
-    - Cannot play from all songs: A pseudo-playlist is made only when accessing a folder in the main directory
-    - Pseudo-playlist/playlist changes when navigating: Changing the playlist confuses the playback code and doesn't allow the song to change until one is selected, moving playback to the new playlist
-
-- **v0.2.0:** Version update
-
-    **Features**
-    - Playback controls finished
-    - Playlist controls and management finished
-    - Pop-out control window added
-
-    **Known Issues**
-    - Playback controls not centered in main window
-
-- **v0.2.1:** Minor fixes
-
-    **Features**
-    - Fixed shuffle (wasn't sorting)
-    - Moved player volume setter to set volume before playback
-    - Added larger pop-out player for ease of use
-    - Rearranged pop-out player code
-    - Rearranged player controls and "now playing" song info label
-
-    **Known Issues**
-    - None so far. Tinkering ongong.
 
 ## Dependencies
 

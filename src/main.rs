@@ -122,6 +122,8 @@ impl Main {
     fn play(&mut self) {
         self.shuffle();
 
+        if self.now_playing == String::new() { self.now_playing = self.selected.clone(); };
+
         if let Ok(mut player) = self.playback.try_lock() {
             match self.play_state {
                 PlayState::Paused | PlayState::Stopped => {
@@ -155,8 +157,12 @@ impl Main {
     fn shuffle(&mut self) {
         match self.is_shuffled {
             false => {
-                if let Some(sorted) = self.sorted_playlist.clone() {
-                    if !sorted.is_empty() { self.now_playinglist = Some(sorted); };
+                if !self.sorted_playlist.is_some() { let _ = self.load_sources(self.path.clone()); }
+                else {
+                    if let Some(sorted) = self.sorted_playlist.clone() {
+                        if !sorted.is_empty() { self.now_playinglist = Some(sorted); }
+                        else { let _ = self.load_sources(self.path.clone()); };
+                    };
                 };
             },
             
@@ -165,7 +171,7 @@ impl Main {
                 let mut playlist = Playlist::new(String::new());
                 let mut shuffled: HashMap<i32, String> = HashMap::new();
 
-                if let Some(list) = &self.now_playinglist.clone() {
+                if let Some(list) = &self.now_playinglist {
                     if let Some(sources) = list.clone().get_sources() {
                         for source in sources {
                             shuffled.insert(index, source.clone());
@@ -177,7 +183,11 @@ impl Main {
                 
                 for (_index, source) in shuffled { playlist.add_source(Some(source)); };
 
-                self.now_playinglist = Some(playlist);
+                self.now_playinglist = Some(playlist.clone());
+
+                if self.selected == String::new() {
+                    if let Some(source) = playlist.get_source(0) { self.selected = source; };
+                };
             }
         };
     }
@@ -297,6 +307,11 @@ impl Main {
 
         self.pseudo_playlist = Some(sources);
         self.sorted_playlist = self.pseudo_playlist.clone();
+        self.now_playinglist = self.pseudo_playlist.clone();
+
+        if let Some(list) = self.pseudo_playlist.clone() {
+            self.selected = list.get_source(0).unwrap();
+        };
 
         Ok(())
     }
@@ -347,8 +362,7 @@ impl Main {
                 self.play_state = PlayState::Stopped;
 
                 match self.repeat_state {
-                    RepeatState::All => self.skip_forward(),
-                    RepeatState::None => self.skip_forward(),
+                    RepeatState::All | RepeatState::None => self.skip_forward(),
                     RepeatState::One => self.play()
                 };
             };
@@ -366,6 +380,17 @@ impl Main {
                 false => self.big_player_open = true,
                 true => self.big_player_open = false
             };
+        };
+    }
+    
+    fn cancel_button(&mut self, ui: &mut Ui) {
+        let button = Button::new("Cancel");
+        let component = ui.add_sized([70.0, 30.0], button);
+
+        if component.clicked() {
+            self.temp_playlist_name = String::new();
+            self.playlist_add_open = false;
+            self.playlist_edit_open = false;
         };
     }
 
@@ -698,6 +723,7 @@ impl Main {
             self.now_playing = String::new();
             self.selected = String::new();
             self.now_playinglist = None;
+            self.sorted_playlist = None;
         
             self.stop();
         };
@@ -776,12 +802,42 @@ impl Main {
         };
     }
 
+    fn buffer(&mut self, ui: &mut Ui) {
+        ui.add_space(8.5);
+        ui.add_space(3.0);
+    }
+
+    fn catalog(&mut self, ui: &mut Ui) {
+        ui.add_space(8.5);
+
+        ui.columns(3, |columns| {
+            let mut can_go_back = false;
+            let mut can_go_dir = false;
+
+            if self.folders.len() > 0 { can_go_back = true; };
+            if self.path.clone() != self.dir.clone() { can_go_dir = true; };
+
+            columns[0].add_enabled_ui(can_go_dir, |ui| { self.dir_button(ui); });
+            columns[1].add_sized([columns[1].available_width(), 30.0], Label::new("Catalog"));
+            columns[2].add_enabled_ui(can_go_back, |ui| { self.catalog_back_button(ui); });
+        });
+
+        ui.add_space(3.0);
+        ui.separator();
+        ui.vertical(|ui| { let _ = self.catalog_list(ui); });
+    }
+
     fn controls(&mut self, ui: &mut Ui, big: bool) {
         ui.horizontal(|ui| {
             self.repeat_button(ui, big);
 
-            let enabled = if self.now_playing != String::new() { true }
+            let mut enabled = if self.selected != String::new() { true }
             else { false };
+
+            match self.play_state {
+                PlayState::Paused | PlayState::Stopped => {},
+                PlayState::Playing => enabled = true
+            };
 
             ui.add_enabled_ui(enabled, |ui| {
                 self.skip_backward_button(ui, big);
@@ -791,6 +847,59 @@ impl Main {
             });
 
             self.shuffle_button(ui, big);
+        });
+    }
+
+    fn edit_playlist(&mut self, ui: &mut Ui) {
+        ui.add_space(8.5);
+
+        ui.horizontal(|ui| {
+            ui.add(Label::new("Name:"));
+            ui.add_space(5.5);
+
+            if let Some(playlist) = &self.edited_playlist {
+                ui.add_sized([ui.available_width(), 30.0],
+                    TextEdit::singleline(&mut playlist.get_name().unwrap()));
+            };
+        });
+
+        ui.add_space(5.5);
+
+        ui.columns(9, |columns| {
+            self.playlist_edit_save_button(&mut columns[2]);
+            self.playlist_remove_button(&mut columns[4]);
+            self.cancel_button(&mut columns[6]);
+        });
+
+        ui.add_space(5.5);
+
+        let salt = self.edited_playlist.clone().unwrap().get_id();
+
+        ScrollArea::vertical().id_salt(salt).show(ui, |ui| {
+            if let Some(playlist) = &self.edited_playlist {
+                if let Some(sources) = playlist.get_sources() {
+                    for source in sources {
+                        ui.set_width(ui.available_width());
+
+                        ui.horizontal(|ui| {
+                            self.source_remove_button(ui, source.clone());
+
+                            ui.add_space(5.5);
+
+                            let mut title = data::get_title(Some(source.clone()));
+
+                            if title == String::new() {
+                                title = filesys::create_from_path(source.clone());
+                            };
+
+                            let button = ui.add(Button::new(title).frame(false)
+                                .fill(Color32::TRANSPARENT));
+
+                            if button.clicked() { self.selected = source; };
+                        });
+                    };
+                };
+            };
         });
     }
 
@@ -847,95 +956,6 @@ impl Main {
         };
     }
 
-    fn buffer(&mut self, ui: &mut Ui) {
-        ui.add_space(8.5);
-        ui.add_space(3.0);
-    }
-    
-    fn cancel_button(&mut self, ui: &mut Ui) {
-        let button = Button::new("Cancel");
-        let component = ui.add_sized([70.0, 30.0], button);
-
-        if component.clicked() {
-            self.temp_playlist_name = String::new();
-            self.playlist_add_open = false;
-            self.playlist_edit_open = false;
-        };
-    }
-
-    fn catalog(&mut self, ui: &mut Ui) {
-        ui.add_space(8.5);
-
-        ui.columns(3, |columns| {
-            let mut can_go_back = false;
-            let mut can_go_dir = false;
-
-            if self.folders.len() > 0 { can_go_back = true; };
-            if self.path.clone() != self.dir.clone() { can_go_dir = true; };
-
-            columns[0].add_enabled_ui(can_go_dir, |ui| { self.dir_button(ui); });
-            columns[1].add_sized([columns[1].available_width(), 30.0], Label::new("Catalog"));
-            columns[2].add_enabled_ui(can_go_back, |ui| { self.catalog_back_button(ui); });
-        });
-
-        ui.add_space(3.0);
-        ui.separator();
-        ui.vertical(|ui| { let _ = self.catalog_list(ui); });
-    }
-
-    fn edit_playlist(&mut self, ui: &mut Ui) {
-        ui.add_space(8.5);
-
-        ui.horizontal(|ui| {
-            ui.add(Label::new("Name:"));
-            ui.add_space(5.5);
-
-            if let Some(playlist) = &self.edited_playlist {
-                ui.add_sized([ui.available_width(), 30.0],
-                    TextEdit::singleline(&mut playlist.get_name().unwrap()));
-            };
-        });
-
-        ui.add_space(5.5);
-
-        ui.columns(9, |columns| {
-            self.playlist_edit_save_button(&mut columns[2]);
-            self.playlist_remove_button(&mut columns[4]);
-            self.cancel_button(&mut columns[6]);
-        });
-
-        ui.add_space(5.5);
-
-        let salt = self.edited_playlist.clone().unwrap().get_id();
-
-        ScrollArea::vertical().id_salt(salt).show(ui, |ui| {
-            if let Some(playlist) = &self.edited_playlist {
-                if let Some(sources) = playlist.get_sources() {
-                    for source in sources {
-                        ui.set_width(ui.available_width());
-
-                        ui.horizontal(|ui| {
-                            self.source_remove_button(ui, source.clone());
-
-                            ui.add_space(5.5);
-
-                            let mut title = data::get_title(Some(source.clone()));
-
-                            if title == String::new() {
-                                title = filesys::create_from_path(source.clone());
-                            };
-
-                            let button = ui.add(Button::new(title).frame(false)
-                                .fill(Color32::TRANSPARENT));
-
-                            if button.clicked() { self.selected = source; };
-                        });
-                    };
-                };
-            };
-        });
-    }
-
     fn playing_view(&mut self, ui: &mut Ui, album: String, artist: String, title: String, mini: bool) {
         let size = if mini { 12.0 } else { 40.0 };
         let width = if mini { 193.0 } else { 680.0 };
@@ -957,6 +977,8 @@ impl Main {
 
         if ui.is_rect_visible(rect) {
             ui.add_space(8.5);
+
+            self.setup_stopwatch();
 
             if let Ok(mut player) = self.playback.try_lock() {
                 player.set_volume(self.volume as f32 / 100.0);
@@ -1038,8 +1060,6 @@ impl Main {
                 self.update_playback();
             });
 
-            self.setup_stopwatch();
-
             ui.add_space(1.5);
 
             ui.ctx().request_repaint_after(Duration::from_millis(10));
@@ -1086,12 +1106,15 @@ impl Main {
         entries.sort();
 
         if !self.pseudo_playlist.is_some() { let _ = self.load_sources(self.dir.clone()); };
+        if !self.sorted_playlist.is_some() { let _ = self.load_sources(self.dir.clone()); };
 
         ScrollArea::vertical().auto_shrink(false).id_salt("catalog").show(ui, |ui| {
             if self.dir != "/" {
                 for entry in &entries {
                     let file = entry.as_path().file_name().unwrap().display().to_string();
-                    let button = ui.add(Button::new(&file).frame(false).fill(Color32::TRANSPARENT));
+
+                    let button = ui.add(Button::new(&file).frame(false).fill(Color32::TRANSPARENT)
+                        .truncate());
                     
                     if button.clicked() {
                         if entry.as_path().is_file() {
@@ -1112,8 +1135,6 @@ impl Main {
                             self.path = new_path.clone();
 
                             if new_path != self.dir.clone() { self.folders.push(new_path.clone()); };
-
-                            self.pseudo_playlist = None;
 
                             let _ = self.load_sources(new_path);
                         };
@@ -1163,7 +1184,7 @@ impl Main {
                                 };
 
                                 let button = ui.add(Button::new(title).frame(false)
-                                    .fill(Color32::TRANSPARENT));
+                                    .fill(Color32::TRANSPARENT).truncate());
 
                                 if button.clicked() { self.selected = source; };
                             });
@@ -1182,7 +1203,7 @@ impl Main {
                         ui.add_space(5.5);
 
                         let button = ui.add(Button::new(entry.get_name().unwrap()).frame(false)
-                            .fill(Color32::TRANSPARENT));
+                            .fill(Color32::TRANSPARENT).truncate());
 
                         if button.clicked() {
                             self.active_playlist = Some(entry.clone());
