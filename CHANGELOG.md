@@ -66,3 +66,17 @@
     **Known Issues**
     - Now Playing playlist not properly changing when stopped if previously playing while navigating
     - Shuffle order is inconsistent during same shuffle state
+
+- **v0.2.3:** Minor fixes
+
+    **Added**
+    - Nothing this time
+
+    **Changes**
+    - Removed code shuffling playlist every time "play" is called
+
+    **Fixes**
+    - Shuffled playlist now consistent
+
+    **Known Issues**
+    - Now Playing playlist not properly changing when stopped if previously playing while navigating

@@ -120,8 +120,6 @@ impl Main {
     }
     
     fn play(&mut self) {
-        self.shuffle();
-
         if self.now_playing == String::new() { self.now_playing = self.selected.clone(); };
 
         if let Ok(mut player) = self.playback.try_lock() {
@@ -210,6 +208,8 @@ impl Main {
                         };
                     } else { index += 1; };
                 };
+
+                self.play();
             };
         };
     }
