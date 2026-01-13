@@ -15,7 +15,7 @@ A cross-platform, light-weight media player.
 
 ## Screenshots
 
-<img width="1600" height="900" alt="screenshot" src="https://github.com/user-attachments/assets/2aba8a87-27e4-4cd7-9b28-d0348c91020d" />
+<img width="1600" height="860" alt="screenshot" src="https://github.com/user-attachments/assets/20c26769-7df3-4711-890c-2865c7a7d27f" />
 
 ## Future Updates
 
